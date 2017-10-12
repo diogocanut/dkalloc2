@@ -1,1 +1,2 @@
-# dkalloc2 -- Implementing and translating a simple malloc
+# dkalloc2 -- 
+Implementing and translating to pt-br a simple malloc

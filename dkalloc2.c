@@ -15,9 +15,26 @@ sbrk(0) retorna o endereço atual do break.
 sbrk(x) com um valor positivo move o break e incrementa a heap em x bytes.
 sbrk(-x) com um valor negativo decrementa a heap em x bytes.
 
+
+
+A biblioteca é compilada com o comando
+gcc -o dkalloc2.so -fPIC -shared dkalloc2.c
+
+depois é setado a variável de ambiente LD_PRELOAD para utilizar a biblioteca dkalloc
+export LD_PRELOAD=$PWD/dkalloc2.so
+compila o programa de teste
+
+gcc -Wall teste.c -o teste
+executa o programa de teste
+./teste
+
 */
 
-
+int multiplo(int x){
+	int ret;
+	ret = ((((x - 1) >> 2) << 2) + 4);
+	return ret;
+}
 
 
 /* cabeçalho do bloco,
@@ -64,13 +81,15 @@ void *malloc(size_t tamanho)
 	void *bloco;
 	struct cabecalho *header;
 	/* caso tamanho seja nulo ou 0 */
-	if (!tamanho)
-		return NULL;
+
 	/* utilizamos o mutex para garantir que apenas uma thread esteja executando essa região do código 
 	devemos garantir que 2 thread não tentem acessar a mesma região de memória. */
 	pthread_mutex_lock(&bloqueio_desbloqueio);
+
+	size_t t = multiplo(tamanho);
+
 	/* procura um bloco livre maior que o tamanho passado como parametro para o malloc */
-	header = pega_bloco_livre(tamanho);
+	header = pega_bloco_livre(t);
 	/* caso encontrado um bloco disponível */
 	if (header) {
 		/* marcamos o bloco como sendo utilizado */
@@ -85,7 +104,7 @@ void *malloc(size_t tamanho)
 	/* caso não exista bloco disponível com o tamanho que precisamos,
 	então devemos criar um novo bloco, o tamanho total do novo bloco
 	é a soma do tamanho do cabecalho e o tamanho passado como argumento para o malloc */
-	tamanho_total = sizeof(struct cabecalho) + tamanho;
+	tamanho_total = sizeof(struct cabecalho) + t;
 	/* sbrk incrimenta o break, aumentando a heap no tamanho_total e retorna a posição do break(final do bloco) */
 	bloco = sbrk(tamanho_total);
 	/* caso sbrk falhe retornara -1 */
@@ -97,7 +116,7 @@ void *malloc(size_t tamanho)
 	/* cabeçalho aponta para o break 
 	e atualizamos suas informações de acordo com o novo bloco*/
 	header = bloco;
-	header->tamanho = tamanho;
+	header->tamanho = t;
 	header->livre = 0;
 	header->prox = NULL;
 	/* se a lista estava vazia, atualizamos o primeiro elemento como sendo o novo bloco */
